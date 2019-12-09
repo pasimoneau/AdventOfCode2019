@@ -15,6 +15,10 @@ public class IntCode
     
     final int maxParamCount = 3;
     final int maxNumInputs = 2;
+     
+    int     ip           = 0;
+    boolean done         = false;
+    int     inputIndex   = 0;
     
     int [] params        = new int[maxParamCount+1];
     int opCodeSizes[]    = new int[opCodeEnd+1];
@@ -23,6 +27,8 @@ public class IntCode
     
     IntCode()
     {
+        done = false;
+        
         opCodeSizes[opCodeEnd] = 1;
         opCodeSizes[opCodeAdd]  = 4;
         opCodeSizes[opCodeMult]  = 4;
@@ -41,6 +47,8 @@ public class IntCode
         outputParam[opCodeJumpIfFalse] = 0;
         outputParam[opCodeLessThan] = 3;
         outputParam[opCodeEquals] = 3;        
+        
+        reset();
     }
     
     void inputProgram(int [] program)
@@ -50,18 +58,33 @@ public class IntCode
             memory.add(o);        
     }
     
+    void reset()
+    {
+        ip = 0;
+        done = false;
+        inputIndex = 0;
+    }
+    
+    boolean isDone()
+    {
+        return done;
+    }
+    
+    void dumpMemory()
+    {
+        System.out.println("memory:" + memory);    
+    }
+    
     int run(int phase, int input)
     {
         int opCode    = 0;
         int result    = 0;
-        int output    = 0;
+        int output    = input;
         
         int[] inputs = new int[maxNumInputs];
         inputs[0] = phase;
         inputs[1] = input;
-        int inputIndex = 0;
         
-        int ip = 0;              
         boolean doLoop = true;
         while(doLoop)
         {
@@ -79,12 +102,12 @@ public class IntCode
                     opCodeStr = instStr.substring(instStr.length()-2, instStr.length());
                     paramStr = instStr.substring(0, instStr.length()-2);
                 }
-                //
+
                 while(paramStr.length()<maxParamCount)
                 {
                     paramStr = "0" + paramStr;
                 }
-                paramStr += "0";
+                paramStr += "0"; // zeroeth parameter
 
                 // invert to restore sanity to parameter values
                 StringBuilder builder = new StringBuilder();
@@ -115,6 +138,7 @@ public class IntCode
             case opCodeEnd:   
                 // opCode 99
                 doLoop = false;
+                done = true;
                 break;
             case opCodeAdd:
                 // opCode 1
@@ -131,13 +155,16 @@ public class IntCode
             case opCodeInput:
                 // opCode 3
                 // set param1 from input
-                memory.set(params[1], inputs[inputIndex++]);
+                memory.set(params[1], inputs[inputIndex]);
+                if(inputIndex==0)
+                    inputIndex++;
                 break;
             case opCodeOutput:
                 // opCode 4
-                // output param1
+                // output param1 
+                doLoop = false;
                 output = memory.get(params[1]);
-                System.out.println("output:" + output);          
+//                System.out.println("output:" + output);  
                 break;
             case opCodeJumpIfTrue:
                 // opCode 5
@@ -187,8 +214,6 @@ public class IntCode
             if(advanceIp)
                 ip += opCodeSizes[opCode];
         }
-
-//        System.out.println("memory:" + memory);
         
         return output;
     }
